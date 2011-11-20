@@ -1,0 +1,24 @@
+#!/bin/sh
+# © 2011 Michael Stapelberg (see also: LICENSE)
+#
+# Initialization script for new network namespaces. Called as the first window
+# in the screen session and communicates the PID back to spawn-ns.
+#
+# Syntax: spawn-ns-initns <fifo path>
+
+[ -z "$1" ] && { echo "FIFO path unspecified"; exit 1; }
+
+# If any command fails, we are screwed, so exit.
+set -e
+
+# Enable (IPv4) forwarding.
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Enable NAT.
+iptables -t nat -A POSTROUTING -j MASQUERADE
+
+# Write our PID to the FIFO to indicate that setup is done.
+echo $$ > "$1"
+
+echo "Setup done. Kill this window (Ctrl-C) as long as you have others."
+cat

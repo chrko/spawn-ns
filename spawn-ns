@@ -1,0 +1,183 @@
+#!/usr/bin/env perl
+# vim:ts=4:sw=4:expandtab
+# © 2011 Michael Stapelberg (see also: LICENSE)
+#
+# Script to setup a screen session in a new network namespace.
+# Terminology:
+# • "host" means the system on which the screen sessions are running on.
+# • "namespace" means the screen session within a new network namespace.
+#
+# A bridge ("vbr") is created on the host, all namespaces are connected to it.
+#
+# Example:
+# $ spawn-ns --name dhcp --ip 10.0.1.1 --donate-dev eth0
+# # screen -x ns-dhcp; run dhclient -d eth0 in there
+#
+# $ spawn-ns --name vpn --ip 10.0.2.1 --gw 10.0.1.1
+# # screen -x ns-vpn; run openvpn in there
+#
+# $ ip -4 route add default via 10.0.2.1
+
+use strict;
+use warnings;
+use Data::Dumper;
+use POSIX qw(mkfifo);
+use File::Temp qw(:POSIX tempfile);
+use FindBin;
+use Getopt::Long;
+use v5.10;
+
+my $bridge = 'vbr';
+my $name = 'poc';
+my $hostip = '10.0.0.1/16';
+my $ip = '';
+my $gw = '';
+
+GetOptions(
+    'ip=s' => \$ip,
+    'gw=s' => \$gw,
+    'name=s' => \$name,
+) or die "Could not parse options: $!";
+
+if ($ip eq '') {
+    die "Need an IP address";
+}
+
+################################################################################
+# Helper functions
+################################################################################
+
+# Runs the given command using system() and provides useful error messages.
+sub run {
+    my ($command) = @_;
+
+    return if system($command) == 0;
+
+    # system() did not run successfully, find out why.
+    if ($? == -1) {
+        say STDERR qq|ERROR: Failed to execute "$command": $!|;
+        exit 1;
+    } elsif ($? & 127) {
+        my $signal = ($? & 127);
+        say STDERR qq|ERROR: Command "$command" died with signal $signal|;
+        exit 1;
+    } else {
+        my $code = ($? >> 8);
+        say STDERR qq|ERROR: Command "$command" exited with return code $code|;
+        exit 1;
+    }
+}
+
+# Runs the given command inside the screen session for the network namespace.
+sub run_ns {
+    my ($command) = @_;
+
+    # Attach ns-$name (-x),
+    # Select the first window (-p0),
+    # Run screen command (-X),
+    # execute command with stdin/stdout/stderr connected to screen (as opposed
+    # to the program running in the screen window)
+    run "screen -x ns-$name -p0 -X exec ... /bin/sh -c '$command'";
+}
+
+# reads in a whole file
+sub slurp {
+    open my $fh, '<', shift;
+    local $/;
+    <$fh>;
+}
+
+################################################################################
+# System setup
+################################################################################
+
+# Verify the effective user id is 0.
+$> == 0 or die "ERROR: Need root priviledges (running as uid $>).";
+
+# Verify all necessary executables are in our $PATH.
+my @executables = qw(brctl ip lxc-unshare iptables screen);
+for my $exe (@executables) {
+    system("which $exe >/dev/null") == 0 or
+        die "Required executable $exe not found";
+}
+
+say "Checking system...";
+
+# Verify the veth module is present or load it. We need it to create a link
+# between the namespace and the host system.
+my @modules = split("\n", slurp('/proc/modules'));
+if (scalar grep { /^veth / } @modules == 0) {
+    # TODO: modprobe instead
+    say "ERROR: The veth module is not loaded";
+    exit 1;
+}
+
+# Ensure the bridge device exists, so that the different namespaces can
+# communicate with each other (and the host).
+if (! -d "/sys/class/net/$bridge/bridge") {
+    say qq|Bridge "$bridge" not found, trying to create it...|;
+    run "brctl addbr $bridge";
+    run "ip -4 addr add $hostip dev $bridge";
+    run "ip link set vbr up";
+}
+# If the bridge exists, we assume it has the correct IP address setup.
+
+################################################################################
+# Namespace creation
+################################################################################
+
+say "Creating network namespace:";
+say "    Name:    $name";
+say "    IP:      $ip";
+say "    Gateway: $gw" if $gw ne '';
+
+# Create a "pipe" veth device to the namespace.
+run "ip link add name vto_$name type veth peer name v_$name";
+# XXX: to undo: ip link delete vto_dhcp
+
+# Create a temporary screen config which will execute the spawn-ns-initns shell
+# script. This script communicates its PID back via a FIFO and allows us to put
+# the remote end of the veth device into the new namespace.
+my $initns_path = "$FindBin::Bin/spawn-ns-initns";
+my $fifo_path = tmpnam('/tmp/fifo-ns-XXXXXX');
+mkfifo($fifo_path, 0600) or die "Could not make FIFO: $!";
+my ($fh, $filename) = tempfile('/tmp/screenrc-ns-XXXXXX', UNLINK => 1);
+my $statusline =
+    q|%{Yb}%-w%{} %{kr} %n %f %{-} %+w %=ns %{kg} | . uc($name) .
+    qq| %{Yb} ip %{kc} $ip %{Yb} gw %{km} $gw %{-} %Y-%m-%d %c:%s|;
+say $fh <<EOF;
+autodetach on
+screen 0 $initns_path $fifo_path
+defhstatus "screen "
+hardstatus off
+caption always "$statusline"
+EOF
+close($fh);
+
+# Export configuration as environment variables so that the processes inside
+# the namespace can use it.
+$ENV{NS_IP} = $ip;
+$ENV{NS_GW} = $gw;
+$ENV{NS_NAME} = $name;
+system("lxc-unshare -s NETWORK -- screen -d -m -S ns-$name -c $filename &");
+
+# Block on the FIFO to wait until the screen setup is done.
+open($fh, '<', $fifo_path);
+chomp(my $ns_pid = <$fh>);
+
+# Put the remote end of the veth device into the network namespace of $ns_pid.
+run "ip link set v_$name netns $ns_pid";
+
+# Then configure it there.
+my $config = qq|ip addr add $ip peer $hostip dev v_$name | .
+             qq|&& ip link set v_$name up|;
+$config .=   qq|&& ip -4 route add default via $gw| if $gw ne '';
+run_ns $config;
+
+run "ip link set vto_$name up";
+run "brctl addif vbr vto_$name";
+say "";
+say "setup done, enjoy your screen session:";
+say "    screen -x ns-$name";
+say "";
+run "ping -c 1 -n $ip";
