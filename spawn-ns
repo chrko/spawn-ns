@@ -32,11 +32,13 @@ my $name = 'poc';
 my $hostip = '10.0.0.1/16';
 my $ip = '';
 my $gw = '';
+my $dns = '';
 
 GetOptions(
     'ip=s' => \$ip,
     'gw=s' => \$gw,
     'name=s' => \$name,
+    'dns=s' => \$dns,
 ) or die "Could not parse options: $!";
 
 if ($ip eq '') {
@@ -130,6 +132,7 @@ say "Creating network namespace:";
 say "    Name:    $name";
 say "    IP:      $ip";
 say "    Gateway: $gw" if $gw ne '';
+say "    DNS:     $dns" if $dns ne '';
 
 # Create a "pipe" veth device to the namespace.
 run "ip link add name vto_$name type veth peer name v_$name";
@@ -159,7 +162,8 @@ close($fh);
 $ENV{NS_IP} = $ip;
 $ENV{NS_GW} = $gw;
 $ENV{NS_NAME} = $name;
-system("lxc-unshare -s NETWORK -- screen -d -m -S ns-$name -c $filename &");
+$ENV{NS_DNS} = $dns;
+system("lxc-unshare -s 'NETWORK|MOUNT' -- screen -d -m -S ns-$name -c $filename &");
 
 # Block on the FIFO to wait until the screen setup is done.
 open($fh, '<', $fifo_path);
@@ -172,6 +176,7 @@ run "ip link set v_$name netns $ns_pid";
 my $config = qq|ip addr add $ip peer $hostip dev v_$name | .
              qq|&& ip link set v_$name up|;
 $config .=   qq|&& ip -4 route add default via $gw| if $gw ne '';
+$config .=   qq|&& spawn-ns-overwrite-dns $dns| if $dns ne '';
 run_ns $config;
 
 run "ip link set vto_$name up";

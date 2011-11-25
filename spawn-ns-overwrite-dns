@@ -1,0 +1,26 @@
+#!/bin/sh
+# © 2011 Michael Stapelberg (see also: LICENSE)
+#
+# Overwrites /etc/resolv.conf by bind-mounting a tempfile over it.
+#
+# Syntax: spawn-ns-overwrite-dns <dns>
+
+[ -z "$1" ] && { echo "No DNS server specified"; exit 1; }
+
+# If any command fails, we are screwed, so exit.
+set -e
+
+# Create a temporary directory with the name of our netspace in it.
+TMPDIR=$(mktemp -d "/tmp/ns-${NS_NAME}-dns.XXXXXXXXXX")
+
+# Create a resolv.conf file in there.
+echo "nameserver $1" > ${TMPDIR}/resolv.conf
+
+# Bindmount the tempfile over /etc/resolv.conf,
+# without touching /etc/mtab (-n). This relies on a separate
+# mount namespace which we get by lxc-unshare -s MOUNT.
+mount -n --bind ${TMPDIR}/resolv.conf /etc/resolv.conf
+
+# We can actually delete the temporary directory now, the kernel seems to be
+# keeping the data around.
+rm -rf "${TMPDIR}"
