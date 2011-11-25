@@ -28,6 +28,7 @@ use Getopt::Long;
 use v5.10;
 
 my $bridge = 'vbr';
+my $donate = '';
 my $name = 'poc';
 my $hostip = '10.0.0.1/16';
 my $ip = '';
@@ -41,6 +42,7 @@ GetOptions(
     'name=s' => \$name,
     'dns=s' => \$dns,
     'command=s' => \$command,
+    'donate-dev=s' => \$donate,
 ) or die "Could not parse options: $!";
 
 if ($ip eq '') {
@@ -175,6 +177,8 @@ chomp(my $ns_pid = <$fh>);
 
 # Put the remote end of the veth device into the network namespace of $ns_pid.
 run "ip link set v_$name netns $ns_pid";
+# If another device should be donated, put it into $ns_pids network ns, too.
+run "ip link set $donate netns $ns_pid" if $donate ne '';
 
 # Then configure it there.
 my $config = qq|ip addr add $ip peer $hostip dev v_$name | .
