@@ -113,9 +113,8 @@ say "Checking system...";
 # between the namespace and the host system.
 my @modules = split("\n", slurp('/proc/modules'));
 if (scalar grep { /^veth / } @modules == 0) {
-    # TODO: modprobe instead
     say "ERROR: The veth module is not loaded";
-    exit 1;
+    run "modprobe veth";
 }
 
 # Ensure the bridge device exists, so that the different namespaces can
