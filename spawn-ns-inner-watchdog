@@ -18,12 +18,18 @@ use Sys::Syslog;
 use v5.10;
 
 my $ip = '';
+my $wait = 0;
 
 GetOptions(
     'ping-ip=s' => \$ip,
+    'wait=i' => \$wait,
 ) or die "Could not parse options: $!";
 
 die "Need an IP address" if $ip eq '';
+
+# Wait some time so that the command has some time to startup before we check
+# for network connectivity.
+sleep $wait;
 
 openlog "wd-$ENV{NS_NAME}-in", 'pid', 'daemon';
 syslog 'info', "Inner watchdog starting, pinging $ip";
