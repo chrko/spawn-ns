@@ -33,12 +33,14 @@ my $hostip = '10.0.0.1/16';
 my $ip = '';
 my $gw = '';
 my $dns = '';
+my $command = '';
 
 GetOptions(
     'ip=s' => \$ip,
     'gw=s' => \$gw,
     'name=s' => \$name,
     'dns=s' => \$dns,
+    'command=s' => \$command,
 ) or die "Could not parse options: $!";
 
 if ($ip eq '') {
@@ -133,6 +135,7 @@ say "    Name:    $name";
 say "    IP:      $ip";
 say "    Gateway: $gw" if $gw ne '';
 say "    DNS:     $dns" if $dns ne '';
+say "    Command: $command" if $command ne '';
 
 # Create a "pipe" veth device to the namespace.
 run "ip link add name vto_$name type veth peer name v_$name";
@@ -151,6 +154,7 @@ my $statusline =
 say $fh <<EOF;
 autodetach on
 screen 0 $initns_path $fifo_path
+screen 1
 defhstatus "screen "
 hardstatus off
 caption always "$statusline"
@@ -181,6 +185,17 @@ run_ns $config;
 
 run "ip link set vto_$name up";
 run "brctl addif vbr vto_$name";
+
+# Now run the $command (if any) in the first screen window. We use the screen
+# 'stuff' command instead of 'exec' to simulate a user executing this in a
+# shell, so that job control works and the shell stays open after ^C.
+# The >/dev/null is only here to make Perl’s system() definitely pass this to
+# sh -c.
+if ($command ne '') {
+    sleep 1;
+    run "screen -x ns-$name -p1 -X stuff \$'$command\\n' >/dev/null";
+}
+
 say "";
 say "setup done, enjoy your screen session:";
 say "    screen -x ns-$name";
