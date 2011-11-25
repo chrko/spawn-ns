@@ -1,0 +1,67 @@
+#!/usr/bin/env perl
+# vim:ts=4:sw=4:expandtab
+# © 2011 Michael Stapelberg (see also: LICENSE)
+#
+# Inner watchdog. Pings the given IP address forever and exits with return code
+# 1 if the IP address did not answer to 5 consecutive pings.
+#
+# TODO: it is unclear to me if this process also is expected to wait() for
+# child processes, since it’s PID 1?
+
+use strict;
+use warnings;
+use AnyEvent; # not in core
+use AnyEvent::Util;
+use Net::Ping;
+use Getopt::Long;
+use Sys::Syslog;
+use v5.10;
+
+my $ip = '';
+
+GetOptions(
+    'ping-ip=s' => \$ip,
+) or die "Could not parse options: $!";
+
+die "Need an IP address" if $ip eq '';
+
+openlog "wd-$ENV{NS_NAME}-in", 'pid', 'daemon';
+syslog 'info', "Inner watchdog starting, pinging $ip";
+
+# Use ICMP pings with 5 seconds timeout.
+my $ping = Net::Ping->new('icmp', 5);
+
+# Enable fractional second reporting of round trip times.
+$ping->hires(1);
+
+# Counter of subsequently failed pings (gets reset to 0 on every reply).
+# When this counter reaches 5, the watchdog will exit with return code 1.
+my $failed_pings = 0;
+
+my $timer;
+$timer = AnyEvent->timer(
+    after => 0,
+    interval => 1,
+    cb => sub {
+        AnyEvent::Util::fork_call {
+            return $ping->ping($ip);
+        } sub {
+            my ($reachable, $duration, $ip) = @_;
+            if ($reachable) {
+                say "$ip replied in $duration sec";
+                $failed_pings = 0;
+                return;
+            }
+
+            say "No ICMP ECHO reply from $ip for 5 seconds";
+
+            # The host did not answer :/
+            if (++$failed_pings == 5) {
+                syslog 'info', 'Exiting now due to 5 failed pings in a row.';
+                exit 1;
+            }
+        };
+    });
+
+# Loop forever.
+AE::cv->recv;

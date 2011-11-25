@@ -1,0 +1,69 @@
+#!/bin/sh
+# vim:ts=4:sw=4:expandtab
+# © 2011 Michael Stapelberg (see also: LICENSE)
+#
+# The outer watchdog. It starts the inner watchdog in a separate
+# PID namespace. As soon as the inner watchdog fails, it will reset
+# the networking to a clean state and retry.
+#
+# Syntax: spawn-ns-watchdog <command> <watchdog-parameters>
+
+[ -z "$1" ] && { echo "No command specified"; exit 1; }
+# $2 is optional
+
+COMMAND="$1"
+WATCHDOG_PARAMS="$2"
+
+# If any command fails, we are screwed, so exit.
+set -e
+
+while :
+do
+    logger -s -t wd-${NS_NAME}-out 'Starting watchdog'
+
+    # Start the watchdog + program in a separate namespace:
+    #
+    # First, we remount /proc to get the actual namespace's PIDs,
+    # just in case some program or script relies on it.
+    #
+    # Then, we launch the program (like vpnc) into background and
+    # replace the shell process with the (inner) watchdog. Thus,
+    # if the watchdog itself fails, the namespace is immediately
+    # killed and we never leave a mess behind.
+    setsid lxc-unshare -s 'PID|MOUNT' -- /bin/sh -c \
+        "mount -n /proc; $COMMAND & \
+         exec ./spawn-ns-inner-watchdog $WATCHDOG_PARAMS" &
+
+    # When this shell script gets the SIGINT signal (^C pressed),
+    # we kill the whole session (pkill -s) which we just started with
+    # setsid. This will kill the lxc-unshare process *and* the shell
+    # it starts. As a consequence, the whole PID namespace is killed,
+    # since the shell is PID 1 in the namespace.
+    on_sigint() {
+        echo ""
+        echo "Received SIGINT, killing $COMMAND..."
+        logger -s -t wd-${NS_NAME}-out 'Watchdog killed by SIGINT'
+        # We want to exit cleanly, so we just *become* pkill. It
+        # either gets killed by the signal it sends, or it exits
+        # with return code 0 -- in either case, it doesn’t show
+        # a warning, like this shell script would when killed. :)
+        exec pkill -9 -s $!
+    }
+    trap 'on_sigint' INT
+
+    # Now we wait until the child exits (inner watchdog died) or the
+    # user aborts. We use || true due to the set -e: the wait returns
+    # false if the process dies, but that is actually OK.
+    wait $! || true
+
+    # As soon as we are here, the watchdog committed suicide.
+    # We fix the networking setup and just start it again in the next
+    # iteration.
+    logger -s -t wd-${NS_NAME}-out \
+        "Watchdog died. Restoring network setup"
+
+    # TODO: delete all IPs from interface
+    # TODO: delete all routes
+    # TODO: restore IP, restore route
+    # TODO: restore DNS
+done
