@@ -62,8 +62,18 @@ do
     logger -s -t wd-${NS_NAME}-out \
         "Watchdog died. Restoring network setup"
 
-    # TODO: delete all IPs from interface
-    # TODO: delete all routes
-    # TODO: restore IP, restore route
-    # TODO: restore DNS
+    # Delete all addresses and routes.
+    ip -4 addr flush dev v_${NS_NAME}
+    ip -4 route flush dev v_${NS_NAME}
+    ip -4 route del default || true
+    # This one should catch all remaining routes (if any), except
+    # of course if some program is actually using tables.
+    ip -4 route flush table all
+
+    # Restore configured network settings.
+    ip -4 addr add ${NS_IP} peer 10.0.0.1/16 dev v_${NS_NAME}
+    # We need to use -z here because the command will then return true
+    # in any case.
+    [ -z "${NS_GW}" ] || ip -4 route add default via ${NS_GW}
+    [ -z "${NS_DNS}" ] || echo "nameserver ${NS_DNS}" > /etc/resolv.conf
 done
