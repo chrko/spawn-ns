@@ -1,0 +1,16 @@
+Source: spawn-ns
+Section: net
+Priority: extra
+Maintainer: Michael Stapelberg <michael@stapelberg.de>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.2
+Homepage: http://code.stapelberg.de/git/spawn-ns
+
+Package: spawn-ns
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, screen, iptables, lxc, bridge-utils, iproute, libanyevent-perl, procps
+Description: spawns screen sessions in separate network namespaces
+ To run various layers of different networking software (like a DHCP client,
+ VPN clients, IPv6 tunnels, etc.) reliably on top of each other, this set of
+ scripts provides the possibility to create GNU screen sessions in a separate
+ network namespace.
