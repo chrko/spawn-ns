@@ -32,7 +32,7 @@ do
     # killed and we never leave a mess behind.
     setsid lxc-unshare -s 'PID|MOUNT' -- /bin/sh -c \
         "mount -n /proc; $COMMAND & \
-         exec ./spawn-ns-inner-watchdog $WATCHDOG_PARAMS" &
+         exec spawn-ns-inner-watchdog $WATCHDOG_PARAMS" &
 
     # When this shell script gets the SIGINT signal (^C pressed),
     # we kill the whole session (pkill -s) which we just started with
