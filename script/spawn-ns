@@ -196,7 +196,7 @@ run "brctl addif vbr vto_$name";
 # sh -c.
 if ($command ne '') {
     sleep 1;
-    run "screen -x ns-$name -p1 -X stuff \$'$command\\n' >/dev/null";
+    run q|screen -x ns-$name -p1 -X eval "stuff \"| . $command . q|\015\"" >/dev/null|;
 }
 
 say "";
