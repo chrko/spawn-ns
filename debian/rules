@@ -16,6 +16,9 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+override_dh_auto_install:
+	dh_auto_install
+	rm debian/spawn-ns/usr/lib/perl/*/perllocal.pod
 
 %:
 	dh $@ 
