@@ -8,7 +8,7 @@ Homepage: http://code.stapelberg.de/git/spawn-ns
 
 Package: spawn-ns
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, screen, iptables, lxc, bridge-utils, iproute, libanyevent-perl, procps
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, screen, iptables, lxc, bridge-utils, iproute, libanyevent-perl, procps, iw
 Description: spawns screen sessions in separate network namespaces
  To run various layers of different networking software (like a DHCP client,
  VPN clients, IPv6 tunnels, etc.) reliably on top of each other, this set of
