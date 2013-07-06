@@ -11,8 +11,9 @@
 # If any command fails, we are screwed, so exit.
 set -e
 
-# Enable (IPv4) forwarding.
+# Enable forwarding.
 echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 
 # Enable NAT.
 iptables -t nat -A POSTROUTING -j MASQUERADE
