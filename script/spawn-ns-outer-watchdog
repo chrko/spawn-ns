@@ -31,7 +31,7 @@ do
     # if the watchdog itself fails, the namespace is immediately
     # killed and we never leave a mess behind.
     setsid lxc-unshare -s 'PID|MOUNT' -- /bin/sh -c \
-        "mount -n /proc; $COMMAND & \
+        "mount -t proc proc /proc; $COMMAND & \
          exec spawn-ns-inner-watchdog $WATCHDOG_PARAMS" &
 
     # When this shell script gets the SIGINT signal (^C pressed),
