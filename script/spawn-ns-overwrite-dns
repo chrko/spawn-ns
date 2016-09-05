@@ -16,8 +16,10 @@ TMPDIR=$(mktemp -d "/tmp/ns-${NS_NAME}-dns.XXXXXXXXXX")
 # Create a resolv.conf file in there.
 echo "nameserver $1" > ${TMPDIR}/resolv.conf
 
+ln -sf ${TMPDIR}/resolv.conf ${TMPDIR}/resolv.conf.ln
+
 # Bindmount the tempfile over /etc/resolv.conf,
 # without touching /etc/mtab (-n). This relies on a separate
 # mount namespace which we get by lxc-unshare -s MOUNT.
-mount -n --bind ${TMPDIR}/resolv.conf /etc/resolv.conf
+mount -n --bind ${TMPDIR}/resolv.conf.ln /etc/resolv.conf
 
