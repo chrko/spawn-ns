@@ -16,8 +16,11 @@ TMPDIR=$(mktemp -d "/tmp/ns-${NS_NAME}-dns.XXXXXXXXXX")
 mkdir -p ${TMPDIR}/netns
 mkdir -p ${TMPDIR}/root
 
-# Create a resolv.conf file in there.
-echo "nameserver $1" > ${TMPDIR}/netns/resolv.conf
+IFS=','
+for nameserver in $1; do
+  # create a resolv.conf file in there.
+  echo "nameserver $nameserver" >> ${TMPDIR}/netns/resolv.conf
+done
 
 mount -n --bind /etc ${TMPDIR}/root
 mount -t aufs -o br=${TMPDIR}/netns=rw:${TMPDIR}/root=ro,udba=reval none /etc
