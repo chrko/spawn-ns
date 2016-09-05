@@ -23,3 +23,5 @@ echo $$ > "$1"
 
 echo "Setup done. Kill this window (Ctrl-C) as long as you have others."
 cat
+
+rm $1
