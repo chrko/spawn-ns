@@ -1,5 +1,5 @@
 #!/bin/bash
 
-mount --make-rprivate /
+mount --make-rslave /
 
 exec $@
