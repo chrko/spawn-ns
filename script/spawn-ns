@@ -34,6 +34,7 @@ my $hostip = '10.0.0.1/16';
 my $ip = '';
 my $gw = '';
 my $dns = '';
+my $dnsmasq = '';
 my $command = '';
 
 GetOptions(
@@ -41,6 +42,7 @@ GetOptions(
     'gw=s' => \$gw,
     'name=s' => \$name,
     'dns=s' => \$dns,
+    'dnsmasq' => \$dnsmasq,
     'command=s' => \$command,
     'donate-dev=s' => \$donate,
 ) or die "Could not parse options: $!";
@@ -205,6 +207,11 @@ run "brctl addif vbr vto_$name";
 if ($command ne '') {
     sleep 1;
     run q|screen -x ns-| . $name . q| -p1 -X eval "stuff \"| . $command . q|\015\"" >/dev/null|;
+}
+
+if ($dnsmasq ne '') {
+    run q|screen -x ns-| . $name . q| -X screen 2 >/dev/null|;
+    run q|screen -x ns-| . $name . q| -p2 -X eval "stuff \"dnsmasq --listen-address=| . $ip . q| --no-daemon\015\"" >/dev/null|;
 }
 
 say "";
