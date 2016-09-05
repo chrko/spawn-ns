@@ -21,6 +21,3 @@ echo "nameserver $1" > ${TMPDIR}/resolv.conf
 # mount namespace which we get by lxc-unshare -s MOUNT.
 mount -n --bind ${TMPDIR}/resolv.conf /etc/resolv.conf
 
-# We can actually delete the temporary directory now, the kernel seems to be
-# keeping the data around.
-rm -rf "${TMPDIR}"
