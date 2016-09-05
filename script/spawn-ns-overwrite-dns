@@ -13,13 +13,12 @@ set -e
 # Create a temporary directory with the name of our netspace in it.
 TMPDIR=$(mktemp -d "/tmp/ns-${NS_NAME}-dns.XXXXXXXXXX")
 
+mkdir -p ${TMPDIR}/netns
+mkdir -p ${TMPDIR}/root
+
 # Create a resolv.conf file in there.
-echo "nameserver $1" > ${TMPDIR}/resolv.conf
+echo "nameserver $1" > ${TMPDIR}/netns/resolv.conf
 
-ln -sf ${TMPDIR}/resolv.conf ${TMPDIR}/resolv.conf.ln
-
-# Bindmount the tempfile over /etc/resolv.conf,
-# without touching /etc/mtab (-n). This relies on a separate
-# mount namespace which we get by lxc-unshare -s MOUNT.
-mount -n --bind ${TMPDIR}/resolv.conf.ln /etc/resolv.conf
+mount -n --bind /etc ${TMPDIR}/root
+mount -t aufs -o br=${TMPDIR}/netns=rw:${TMPDIR}/root=ro,udba=reval none /etc
 
