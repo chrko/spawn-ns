@@ -170,6 +170,9 @@ $ENV{NS_IP} = $ip;
 $ENV{NS_GW} = $gw;
 $ENV{NS_NAME} = $name;
 $ENV{NS_DNS} = $dns;
+$ENV{NS_DONATE} = $donate;
+$ENV{NS_DNSMASQ} = $dnsmasq;
+$ENV{NS_COMMAND} = $command;
 system("lxc-unshare -s 'NETWORK|MOUNT' -- fix-unshare screen -d -m -S ns-$name -c $filename &");
 
 # Block on the FIFO to wait until the screen setup is done.
