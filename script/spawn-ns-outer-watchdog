@@ -77,5 +77,13 @@ do
     # We need to use -z here because the command will then return true
     # in any case.
     [ -z "${NS_GW}" ] || ip -4 route add default via ${NS_GW}
-    [ -z "${NS_DNS}" ] || echo "nameserver ${NS_DNS}" > /etc/resolv.conf
+    if [ -z "${NS_DNS}" ]; then
+        ORIG_IFS=$IFS
+        IFS=','
+        for nameserver in $1; do
+            # create a resolv.conf file in there.
+            echo "nameserver $nameserver" >> ${TMPDIR}/netns/resolv.conf
+        done
+        IFS=$ORIG_IFS
+    fi
 done
