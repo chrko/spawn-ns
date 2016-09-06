@@ -70,6 +70,8 @@ do
     # of course if some program is actually using tables.
     ip -4 route flush table all
 
+    [ -z "${NS_DONATE}" ] || ip -4 addr flush dev ${NS_DONATE}
+
     # Restore configured network settings.
     ip -4 addr add ${NS_IP} peer 10.0.0.1/16 dev v_${NS_NAME}
     # We need to use -z here because the command will then return true
