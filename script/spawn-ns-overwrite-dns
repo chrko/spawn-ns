@@ -23,5 +23,5 @@ for nameserver in $1; do
 done
 
 mount -n --bind /etc ${TMPDIR}/root
-mount -t aufs -o br=${TMPDIR}/netns=rw:${TMPDIR}/root=ro,udba=none none /etc
+mount -t aufs -o br=${TMPDIR}/netns=rw:${TMPDIR}/root=rr,udba=none none /etc
 
