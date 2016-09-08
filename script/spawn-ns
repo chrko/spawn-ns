@@ -29,6 +29,7 @@ use v5.10;
 
 my $bridge = 'vbr';
 my $donate = '';
+my $donateWifi = '';
 my $name = 'poc';
 my $hostip = '10.0.0.1/16';
 my $ip = '';
@@ -44,7 +45,8 @@ GetOptions(
     'dns=s' => \$dns,
     'dnsmasq' => \$dnsmasq,
     'command=s' => \$command,
-    'donate-dev=s' => \$donate,
+    'donate-interface=s' => \$donate,
+    'donate-wireless-dev=s' => \$donateWifi,
 ) or die "Could not parse options: $!";
 
 if ($ip eq '') {
@@ -185,8 +187,8 @@ run "ip link set v_$name netns $ns_pid";
 if ($donate ne '') {
     # For donating wireless interfaces, we deal with the phy interface, which
     # can only be donated using 'iw'.
-    if ($donate =~ /^phy/) {
-        run "iw $donate set netns $ns_pid";
+    if ($donateWifi ne '') {
+        run "iw $donateWifi set netns $ns_pid";
     } else {
         run "ip link set $donate netns $ns_pid";
     }
