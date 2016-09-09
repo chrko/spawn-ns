@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+[ -z "$1" ] && NS_NAME=$1
+
+screen -x ns-${NS_NAME} -X number
+
+sleep 1
+
+screen -x ns-${NS_NAME} -X at "#" stuff "\003"
+
+sleep 1
+
+screen -x ns-${NS_NAME} -X at "#" stuff "exit \015"
+
+sleep 1
+
+screen -x ns-${NS_NAME} -X number || exit 0
+
+screen -x ns-${NS_NAME} -X at "#" kill
+exit 1

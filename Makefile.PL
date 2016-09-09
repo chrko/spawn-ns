@@ -14,6 +14,7 @@ install_script 'spawn-ns-initns';
 install_script 'spawn-ns-inner-watchdog';
 install_script 'spawn-ns-outer-watchdog';
 install_script 'spawn-ns-overwrite-dns';
+install_script 'spawn-ns-stop';
 install_script 'fix-unshare';
 
 WriteAll;
