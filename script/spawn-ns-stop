@@ -2,21 +2,36 @@
 
 set -e
 
-[ -z "$1" ] && NS_NAME=$1
+if [ ! -z "$1" ]; then
+  NS_NAME=$1
+else
+  echo "Usage with $0 ns-name"
+  exit 1
+fi
 
-screen -x ns-${NS_NAME} -X number
+echo "Testing if screen ns-${NS_NAME} exists..."
+if ! screen -x ns-${NS_NAME} -X number > /dev/null; then
+  echo "Session not found!"
+  exit 1
+fi
 
-sleep 1
-
+echo "Sending Ctrl+C"
 screen -x ns-${NS_NAME} -X at "#" stuff "\003"
 
 sleep 1
 
+echo "Sending exit + Enter"
 screen -x ns-${NS_NAME} -X at "#" stuff "exit \015"
 
 sleep 1
 
-screen -x ns-${NS_NAME} -X number || exit 0
+echo "Check if screen windows terminated successfully..."
+if ! screen -x ns-${NS_NAME} -X number > /dev/null; then
+  echo "spawn-ns screen session successfully stopped"
+  exit 0
+fi
 
+echo "Something went wrong?!?"
+echo "Kill remaining windows"
 screen -x ns-${NS_NAME} -X at "#" kill
 exit 1
