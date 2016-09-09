@@ -37,6 +37,7 @@ my $gw = '';
 my $dns = '';
 my $dnsmasq = '';
 my $command = '';
+my $pidfile = '';
 
 GetOptions(
     'ip=s' => \$ip,
@@ -47,6 +48,7 @@ GetOptions(
     'command=s' => \$command,
     'donate-interface=s' => \$donate,
     'donate-wireless-dev=s' => \$donateWifi,
+    'pidfile=s' => \$pidfile,
 ) or die "Could not parse options: $!";
 
 if ($ip eq '') {
@@ -175,6 +177,8 @@ $ENV{NS_DNS} = $dns;
 $ENV{NS_DONATE} = $donate;
 $ENV{NS_DNSMASQ} = $dnsmasq;
 $ENV{NS_COMMAND} = $command;
+$ENV{NS_PIDFILE} = $pidfile;
+
 system("lxc-unshare -s 'NETWORK|MOUNT' -- fix-unshare screen -d -m -S ns-$name -c $filename &");
 
 # Block on the FIFO to wait until the screen setup is done.
