@@ -2,7 +2,7 @@
 
 set -e
 
-if [ ! -z "$1" ]; then
+if [ -n "$1" ]; then
   NS_NAME=$1
 else
   echo "Usage with $0 ns-name"
