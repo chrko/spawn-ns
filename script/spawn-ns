@@ -113,6 +113,10 @@ for my $exe (@executables) {
         die "Required executable $exe not found";
 }
 
+say "Checking already running spawn-ns screen session...";
+
+run "screen -x ns-$name -X number > /dev/null && exit 1 || exit 0";
+
 say "Checking system...";
 
 # Verify the veth module is present or load it. We need it to create a link
