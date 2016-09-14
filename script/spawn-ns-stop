@@ -2,9 +2,23 @@
 
 set -e
 
-if [ -n "$1" ]; then
-  NS_NAME=$1
-else
+while [ $# -gt 1 ]
+do
+key="$1"
+
+case $key in
+    --name)
+    NS_NAME="$2"
+    shift # past argument
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+shift # past argument or value
+done
+
+if [ -z "$NS_NAME" ]; then
   echo "Usage with $0 ns-name"
   exit 1
 fi
