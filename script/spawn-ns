@@ -44,7 +44,7 @@ GetOptions(
     'gw=s' => \$gw,
     'name=s' => \$name,
     'dns=s' => \$dns,
-    'dnsmasq' => \$dnsmasq,
+    'dnsmasq=s' => \$dnsmasq,
     'command=s' => \$command,
     'donate-interface=s' => \$donate,
     'donate-wireless-dev=s' => \$donateWifi,
