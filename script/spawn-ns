@@ -224,7 +224,7 @@ if ($command ne '') {
 
 if ($dnsmasq ne '') {
     run q|screen -x ns-| . $name . q| -X screen 2 >/dev/null|;
-    run q|screen -x ns-| . $name . q| -p2 -X eval "stuff \"dnsmasq --listen-address=| . $ip . q| --no-daemon\015\"" >/dev/null|;
+    run q|screen -x ns-| . $name . q| -p2 -X eval "stuff \"dnsmasq --listen-address=| . $ip . q| --conf-file=/dev/null --no-daemon\015\"" >/dev/null|;
 }
 
 say "";
